@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Property Scout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .property {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>AI Property Scout</h1>
+        <div class="search-box">
+            <input type="text" id="query" placeholder="Enter property search query"
+                value="10 Marla house DHA Phase 6 under 5 Crore">
+            <button onclick="searchProperties()">Search Properties</button>
+            <button onclick="findHouse()">Find House (Full Cycle)</button>
+        </div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        async function searchProperties() {
+            const query = document.getElementById('query').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Searching...';
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                let html = '<h2>Search Results</h2>';
+                if (data.urls && data.urls.length > 0) {
+                    html += '<ul>';
+                    data.urls.forEach(url => {
+                        html += `<li><a href="${url}" target="_blank">${url}</a> <button onclick="extractData('${url}')">Extract Data</button></li>`;
+                    });
+                    html += '</ul>';
+                }
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function extractData(url) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML += '<br>Extracting data...';
+
+            try {
+                const response = await fetch('/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML += `<div class="error">Extract Error: ${data.error}</div>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML += `<div class="property"><h3>${url}</h3><p>${data.content.substring(0, 500)}...</p><button onclick="analyzeText('${data.content.replace(/'/g, "\\'")}')">Analyze</button></div>`;
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="error">Extract Error: ${error.message}</div>`;
+            }
+        }
+
+        async function analyzeText(text) {
+            const resultsDiv = document.getElementById('results');
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML += `<div class="error">Analysis Error: ${data.error}</div>`;
+                    return;
+                }
+
+                resultsDiv.innerHTML += `<div>Analysis: ${JSON.stringify(data.analysis)}</div>`;
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="error">Analysis Error: ${error.message}</div>`;
+            }
+        }
+
+        async function findHouse() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = 'Finding house...';
+
+            try {
+                const response = await fetch('/find_house');
+                const data = await response.json();
+
+                let html = `<h2>Search Query: ${data.query}</h2>`;
+                if (data.extracted_data && data.extracted_data.length > 0) {
+                    data.extracted_data.forEach(item => {
+                        html += `<div class="property">
+                            <h3><a href="${item.url}" target="_blank">${item.url}</a></h3>
+                            <p>Content: ${item.content.substring(0, 300)}...</p>
+                            <p>Analysis: ${JSON.stringify(item.analysis)}</p>
+                        </div>`;
+                    });
+                }
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
