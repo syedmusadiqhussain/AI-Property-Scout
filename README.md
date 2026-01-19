@@ -149,4 +149,4 @@ This project is open source. Please check the license file for details.
 
 ## Support
 
-For issues or questions, please open an issue on GitHub or contact the maintainer.
+syedmusadiqhussain9@gmail.com
